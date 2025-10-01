@@ -277,9 +277,7 @@ def main():
                         response = st.session_state.gemini_rag.chat_with_context(
                             prompt, 
                             st.session_state.vector_store, 
-                            k=DEFAULT_NUM_DOCS,
-                            use_hybrid=(DEFAULT_SEARCH_METHOD == "hybrid"),
-                            alpha=DEFAULT_ALPHA
+                            k=DEFAULT_NUM_DOCS
                         )
                         
                         st.write(response["answer"])
@@ -292,18 +290,11 @@ def main():
                         
                         # Show sources
                         with st.expander("📚 Sources & Scores"):
-                            st.write(f"**Search Method:** {response['search_method'].title()}")
+                            st.write(f"**Search Method:** {response.get('search_method', 'Semantic')}")
                             st.write(f"**Number of Sources:** {response['num_sources']}")
                             
                             for i, (source, score) in enumerate(zip(response["sources"], response["similarity_scores"])):
                                 source_info = f"**Source {i+1}:** {source} (Similarity: {score:.3f})"
-                                
-                                # Add hybrid scores if available
-                                if "combined_scores" in response:
-                                    combined_score = response["combined_scores"][i]
-                                    keyword_score = response["keyword_scores"][i]
-                                    source_info += f" | Combined: {combined_score:.3f} | Keyword: {keyword_score:.3f}"
-                                
                                 st.write(source_info)
                 
                 # Add assistant response to chat history

@@ -93,20 +93,20 @@ def add_conversation_to_vector_store(question: str, answer: str, vector_store):
     vector_store.add_documents([conversation_doc])
     return conversation_doc
 
-# Auto-initialize Gemini if enabled
-if AUTO_INITIALIZE_GEMINI and st.session_state.gemini_rag is None:
-    try:
-        gemini_rag, message = initialize_gemini_with_model(DEFAULT_MODEL)
-        if gemini_rag:
-            st.session_state.gemini_rag = gemini_rag
-        else:
-            # Store error message for display
-            st.session_state.gemini_error = message
-    except Exception as e:
-        st.session_state.gemini_error = f"Failed to initialize Gemini: {str(e)}"
-
 def main():
     """Main application function"""
+    
+    # Auto-initialize Gemini if enabled (moved inside main function)
+    if AUTO_INITIALIZE_GEMINI and st.session_state.gemini_rag is None:
+        try:
+            gemini_rag, message = initialize_gemini_with_model(DEFAULT_MODEL)
+            if gemini_rag:
+                st.session_state.gemini_rag = gemini_rag
+            else:
+                # Store error message for display
+                st.session_state.gemini_error = message
+        except Exception as e:
+            st.session_state.gemini_error = f"Failed to initialize Gemini: {str(e)}"
     
     # Header
     st.title("🤖 RAG Chat with Gemini API")

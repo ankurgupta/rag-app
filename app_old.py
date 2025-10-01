@@ -1,6 +1,5 @@
 """
 Main Streamlit application for RAG with Gemini API
-Uses Streamlit secrets for API key management
 """
 import os
 import streamlit as st
@@ -32,46 +31,23 @@ if "gemini_rag" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-def get_api_key():
-    """
-    Get API key from multiple sources in order of preference:
-    1. Streamlit secrets (best for cloud deployment)
-    2. Environment variable
-    3. Config file
-    """
-    # Option 1: Streamlit secrets (best for cloud)
-    try:
-        if hasattr(st, 'secrets') and 'GOOGLE_API_KEY' in st.secrets:
-            return st.secrets['GOOGLE_API_KEY']
-    except:
-        pass
-    
-    # Option 2: Environment variable
-    env_key = os.getenv("GOOGLE_API_KEY")
-    if env_key and env_key != "your_google_api_key_here":
-        return env_key
-    
-    # Option 3: Config file
-    if GOOGLE_API_KEY and GOOGLE_API_KEY != "your_google_api_key_here":
-        return GOOGLE_API_KEY
-    
-    return None
-
 def initialize_gemini_with_model(model_name: str = DEFAULT_MODEL):
     """Initialize Gemini RAG system with specified model"""
     try:
-        api_key = get_api_key()
-        
-        if not api_key:
-            return None, "No API key found. Please configure your Google API key."
+        # Check if API key is valid
+        if not GOOGLE_API_KEY or GOOGLE_API_KEY == "your_google_api_key_here":
+            st.error("❌ Please configure your Google API key in config.py")
+            return None
             
-        gemini_rag = GeminiRAG(api_key, model_name)
+        gemini_rag = GeminiRAG(GOOGLE_API_KEY, model_name)
         if gemini_rag.test_connection():
-            return gemini_rag, "Success"
+            return gemini_rag
         else:
-            return None, "Failed to connect to Gemini API. Please check your API key."
+            st.error("❌ Failed to connect to Gemini API. Please check your API key.")
+            return None
     except Exception as e:
-        return None, f"Failed to initialize Gemini: {str(e)}"
+        st.error(f"❌ Failed to initialize Gemini: {str(e)}")
+        return None
 
 def initialize_gemini():
     """Initialize Gemini RAG system (backward compatibility)"""
@@ -87,23 +63,19 @@ def add_conversation_to_vector_store(question: str, answer: str, vector_store):
             "type": "qa_pair",
             "question": question,
             "answer": answer,
-            "timestamp": "2024-01-01T00:00:00Z"
+            "timestamp": "2024-01-01T00:00:00Z"  # Placeholder timestamp
         }
     )
     vector_store.add_documents([conversation_doc])
     return conversation_doc
 
-# Auto-initialize Gemini if enabled
+# Auto-initialize Gemini if enabled (with error handling for cloud)
 if AUTO_INITIALIZE_GEMINI and st.session_state.gemini_rag is None:
     try:
-        gemini_rag, message = initialize_gemini_with_model(DEFAULT_MODEL)
-        if gemini_rag:
-            st.session_state.gemini_rag = gemini_rag
-        else:
-            # Store error message for display
-            st.session_state.gemini_error = message
+        st.session_state.gemini_rag = initialize_gemini_with_model(DEFAULT_MODEL)
     except Exception as e:
-        st.session_state.gemini_error = f"Failed to initialize Gemini: {str(e)}"
+        st.error(f"Failed to initialize Gemini: {str(e)}")
+        st.session_state.gemini_rag = None
 
 def main():
     """Main application function"""
@@ -112,37 +84,31 @@ def main():
     st.title("🤖 RAG Chat with Gemini API")
     st.markdown("Upload PDF or text documents and chat with them using AI!")
     
-    # Show API key configuration status
-    api_key = get_api_key()
-    if api_key:
-        st.success("✅ API key configured and ready!")
-    else:
-        st.warning("⚠️ API key not found. Please configure it using one of the methods below.")
-    
-    # Configuration section (only show if no API key)
-    if not api_key:
-        with st.expander("🔧 API Key Configuration", expanded=True):
-            st.markdown("""
-            **Choose your preferred method:**
+    # Configuration section for cloud deployment
+    if not st.session_state.gemini_rag:
+        st.warning("⚠️ Gemini not initialized. Please configure your API key below.")
+        
+        with st.expander("🔧 Configuration", expanded=True):
+            api_key_input = st.text_input(
+                "Google API Key",
+                value=GOOGLE_API_KEY if GOOGLE_API_KEY != "your_google_api_key_here" else "",
+                type="password",
+                help="Enter your Google API key for Gemini"
+            )
             
-            1. **Streamlit Secrets** (Recommended for cloud):
-               Create `.streamlit/secrets.toml`:
-               ```toml
-               GOOGLE_API_KEY = "your_key_here"
-               ```
-            
-            2. **Environment Variable** (For local development):
-               ```bash
-               export GOOGLE_API_KEY="your_key_here"
-               ```
-            
-            3. **Config File** (For local development):
-               Edit `config.py` and set your API key
-            """)
-    
-    # Show error if initialization failed
-    if hasattr(st.session_state, 'gemini_error'):
-        st.error(f"❌ {st.session_state.gemini_error}")
+            if api_key_input and api_key_input != GOOGLE_API_KEY:
+                # Update the global API key for this session
+                import os
+                os.environ["GOOGLE_API_KEY"] = api_key_input
+                # Reinitialize with new key
+                if st.button("Initialize Gemini", type="primary"):
+                    with st.spinner("Initializing Gemini..."):
+                        st.session_state.gemini_rag = initialize_gemini_with_model(DEFAULT_MODEL)
+                        if st.session_state.gemini_rag:
+                            st.success("✅ Gemini initialized successfully!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to initialize Gemini")
     
     # Status indicators
     col1, col2, col3 = st.columns(3)
@@ -243,7 +209,7 @@ def main():
         
         # Check if everything is ready
         if not st.session_state.gemini_rag:
-            st.error("❌ Gemini is not initialized. Please configure your API key first.")
+            st.error("❌ Gemini is not initialized. Please refresh the page.")
         elif not st.session_state.vector_store:
             st.warning("⚠️ Please upload and process documents first")
         else:

@@ -278,3 +278,6 @@ cython_debug/
 # - example_usage.py
 # - test_gemini.py
 # - check_models.py
+
+# Streamlit secrets
+.streamlit/secrets.toml

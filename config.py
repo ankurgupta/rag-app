@@ -2,7 +2,9 @@
 Configuration file for RAG Application
 """
 # Google API Configuration
-GOOGLE_API_KEY = "AIzaSyDgv1-cg0MVONQcEXuS1JlUCJYOgjhiUUU"
+# For local development, replace with your actual API key
+# For cloud deployment, users will input their API key in the UI
+GOOGLE_API_KEY = "your_google_api_key_here"
 
 # Gemini Model Configuration
 DEFAULT_MODEL = "gemini-2.0-flash-001"

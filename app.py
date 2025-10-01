@@ -34,13 +34,19 @@ if "chat_history" not in st.session_state:
 def initialize_gemini_with_model(model_name: str = DEFAULT_MODEL):
     """Initialize Gemini RAG system with specified model"""
     try:
+        # Check if API key is valid
+        if not GOOGLE_API_KEY or GOOGLE_API_KEY == "your_google_api_key_here":
+            st.error("❌ Please configure your Google API key in config.py")
+            return None
+            
         gemini_rag = GeminiRAG(GOOGLE_API_KEY, model_name)
         if gemini_rag.test_connection():
             return gemini_rag
         else:
+            st.error("❌ Failed to connect to Gemini API. Please check your API key.")
             return None
     except Exception as e:
-        st.error(f"Failed to initialize Gemini: {str(e)}")
+        st.error(f"❌ Failed to initialize Gemini: {str(e)}")
         return None
 
 def initialize_gemini():
@@ -63,9 +69,13 @@ def add_conversation_to_vector_store(question: str, answer: str, vector_store):
     vector_store.add_documents([conversation_doc])
     return conversation_doc
 
-# Auto-initialize Gemini if enabled
+# Auto-initialize Gemini if enabled (with error handling for cloud)
 if AUTO_INITIALIZE_GEMINI and st.session_state.gemini_rag is None:
-    st.session_state.gemini_rag = initialize_gemini_with_model(DEFAULT_MODEL)
+    try:
+        st.session_state.gemini_rag = initialize_gemini_with_model(DEFAULT_MODEL)
+    except Exception as e:
+        st.error(f"Failed to initialize Gemini: {str(e)}")
+        st.session_state.gemini_rag = None
 
 def main():
     """Main application function"""
@@ -73,6 +83,32 @@ def main():
     # Header
     st.title("🤖 RAG Chat with Gemini API")
     st.markdown("Upload PDF or text documents and chat with them using AI!")
+    
+    # Configuration section for cloud deployment
+    if not st.session_state.gemini_rag:
+        st.warning("⚠️ Gemini not initialized. Please configure your API key below.")
+        
+        with st.expander("🔧 Configuration", expanded=True):
+            api_key_input = st.text_input(
+                "Google API Key",
+                value=GOOGLE_API_KEY if GOOGLE_API_KEY != "your_google_api_key_here" else "",
+                type="password",
+                help="Enter your Google API key for Gemini"
+            )
+            
+            if api_key_input and api_key_input != GOOGLE_API_KEY:
+                # Update the global API key for this session
+                import os
+                os.environ["GOOGLE_API_KEY"] = api_key_input
+                # Reinitialize with new key
+                if st.button("Initialize Gemini", type="primary"):
+                    with st.spinner("Initializing Gemini..."):
+                        st.session_state.gemini_rag = initialize_gemini_with_model(DEFAULT_MODEL)
+                        if st.session_state.gemini_rag:
+                            st.success("✅ Gemini initialized successfully!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to initialize Gemini")
     
     # Status indicators
     col1, col2, col3 = st.columns(3)

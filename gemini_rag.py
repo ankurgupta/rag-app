@@ -13,7 +13,7 @@ import streamlit as st
 class GeminiRAG:
     """RAG system using Gemini API for question answering"""
     
-    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash-001"):
+    def __init__(self, api_key: str, model_name: str = "gemini-pro"):
         """
         Initialize the Gemini RAG system
         
@@ -30,32 +30,28 @@ class GeminiRAG:
             max_output_tokens=2048
         )
         
-        # Create enhanced prompt template for RAG
+        # Create prompt template for RAG
         self.prompt_template = PromptTemplate(
-            template="""You are an expert AI assistant that provides accurate, detailed answers based on the provided context. Your goal is to help users understand and find information from their documents.
+            template="""You are a helpful AI assistant that answers questions based on the provided context.
 
-CONTEXT INFORMATION:
+Context:
 {context}
 
-USER QUESTION: {question}
+Question: {question}
 
-INSTRUCTIONS:
-1. Analyze the provided context carefully to find relevant information
-2. Answer the question comprehensively using information from the context
-3. If the context contains relevant information, provide a detailed and accurate answer
-4. If the answer requires information not present in the context, clearly state what information is missing
-5. When possible, cite specific sections or sources from the context
-6. If the context doesn't contain enough information to answer the question, respond with: "I don't have enough information in the provided context to answer this question completely. The context covers [brief summary of what is covered], but doesn't include [what's missing]."
-7. Be thorough but concise in your response
-8. If the question is ambiguous, ask for clarification while providing what information you can from the context
+Instructions:
+- Answer the question based on the context provided above
+- If the answer is not in the context, say "I don't have enough information to answer this question based on the provided context"
+- Be concise and accurate
+- If relevant, cite specific parts of the context
 
-ANSWER:""",
+Answer:""",
             input_variables=["context", "question"]
         )
     
     def format_context(self, documents: List[Document]) -> str:
         """
-        Format retrieved documents into context string with better organization
+        Format retrieved documents into context string
         
         Args:
             documents: List of retrieved Document objects
@@ -67,25 +63,11 @@ ANSWER:""",
             return "No relevant context found."
         
         context_parts = []
-        context_parts.append("=== RELEVANT DOCUMENT SECTIONS ===\n")
-        
         for i, doc in enumerate(documents, 1):
             source = doc.metadata.get('source', 'Unknown')
             similarity_score = doc.metadata.get('similarity_score', 0)
-            combined_score = doc.metadata.get('combined_score', similarity_score)
-            keyword_score = doc.metadata.get('keyword_score', 0)
-            
-            # Create a more informative header
-            header = f"--- Section {i} from {source} ---"
-            if 'combined_score' in doc.metadata:
-                header += f" (Relevance: {combined_score:.3f}, Keyword Match: {keyword_score:.3f})"
-            else:
-                header += f" (Similarity: {similarity_score:.3f})"
-            
-            context_parts.append(header)
-            context_parts.append(f"{doc.page_content}\n")
+            context_parts.append(f"Source {i} ({source}, similarity: {similarity_score:.3f}):\n{doc.page_content}\n")
         
-        context_parts.append("=== END OF CONTEXT ===\n")
         return "\n".join(context_parts)
     
     def generate_answer(self, question: str, context_documents: List[Document]) -> str:
@@ -118,7 +100,7 @@ ANSWER:""",
             st.error(f"Error generating answer: {str(e)}")
             return "Sorry, I encountered an error while generating the answer. Please try again."
     
-    def chat_with_context(self, question: str, vector_store, k: int = 4, use_hybrid: bool = False, alpha: float = 0.7) -> dict:
+    def chat_with_context(self, question: str, vector_store, k: int = 4) -> dict:
         """
         Complete RAG pipeline: retrieve relevant documents and generate answer
         
@@ -126,34 +108,23 @@ ANSWER:""",
             question: User's question
             vector_store: VectorStore instance for retrieval
             k: Number of documents to retrieve
-            use_hybrid: Whether to use hybrid search (semantic + keyword)
-            alpha: Weight for semantic search in hybrid mode
             
         Returns:
             Dictionary with answer and metadata
         """
         # Retrieve relevant documents
-        if use_hybrid:
-            relevant_docs = vector_store.hybrid_search(question, k=k, alpha=alpha)
-        else:
-            relevant_docs = vector_store.similarity_search(question, k=k)
+        relevant_docs = vector_store.similarity_search(question, k=k)
         
         # Generate answer
         answer = self.generate_answer(question, relevant_docs)
         
-        # Prepare response with enhanced metadata
+        # Prepare response
         response = {
             "answer": answer,
             "sources": [doc.metadata.get('source', 'Unknown') for doc in relevant_docs],
             "similarity_scores": [doc.metadata.get('similarity_score', 0) for doc in relevant_docs],
-            "num_sources": len(relevant_docs),
-            "search_method": "hybrid" if use_hybrid else "semantic"
+            "num_sources": len(relevant_docs)
         }
-        
-        # Add hybrid search scores if available
-        if use_hybrid:
-            response["combined_scores"] = [doc.metadata.get('combined_score', 0) for doc in relevant_docs]
-            response["keyword_scores"] = [doc.metadata.get('keyword_score', 0) for doc in relevant_docs]
         
         return response
     

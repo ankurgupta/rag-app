@@ -25,11 +25,10 @@ A Retrieval-Augmented Generation (RAG) application that allows you to upload PDF
    pip install -r requirements.txt
    ```
 
-3. **Set up environment variables**:
-   - Copy `env_template.txt` to `.env`
-   - Add your Google API key:
-   ```
-   GOOGLE_API_KEY=your_google_api_key_here
+3. **Configure API Key**:
+   - Open `app.py` and replace the hardcoded API key with your own:
+   ```python
+   GOOGLE_API_KEY = "your_google_api_key_here"
    ```
 
 ## Usage
@@ -41,14 +40,13 @@ A Retrieval-Augmented Generation (RAG) application that allows you to upload PDF
 
 2. **Open your browser** and navigate to `http://localhost:8501`
 
-3. **Set up Gemini**:
-   - Enter your Google API key in the sidebar
-   - Click "Initialize Gemini"
+3. **Gemini is Auto-Initialized**:
+   - The API key is already configured
+   - Gemini initializes automatically when the app starts
 
 4. **Upload documents**:
    - Upload PDF or text files using the file uploader
-   - Adjust chunk size and overlap settings if needed
-   - Click "Process Documents"
+   - Click "Process Documents" (settings are pre-configured)
 
 5. **Start chatting**:
    - Ask questions about your uploaded documents

@@ -1,14 +1,10 @@
 """
 Example usage of the RAG system components
 """
-import os
-from dotenv import load_dotenv
 from document_loader import DocumentProcessor
 from vector_store import VectorStore
 from gemini_rag import GeminiRAG
-
-# Load environment variables
-load_dotenv()
+from config import GOOGLE_API_KEY
 
 def main():
     """Example of how to use the RAG system programmatically"""
@@ -22,13 +18,8 @@ def main():
     # Vector store
     vector_store = VectorStore()
     
-    # Gemini RAG (requires API key)
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        print("Please set GOOGLE_API_KEY in your .env file")
-        return
-    
-    gemini_rag = GeminiRAG(api_key, "gemini-2.0-flash-001")
+    # Gemini RAG (uses hardcoded API key)
+    gemini_rag = GeminiRAG(GOOGLE_API_KEY)
     
     # Test connection
     if not gemini_rag.test_connection():

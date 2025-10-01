@@ -31,6 +31,10 @@ if "gemini_rag" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+# Auto-initialize Gemini if enabled
+if AUTO_INITIALIZE_GEMINI and st.session_state.gemini_rag is None:
+    st.session_state.gemini_rag = initialize_gemini_with_model(DEFAULT_MODEL)
+
 def initialize_gemini_with_model(model_name: str = DEFAULT_MODEL):
     """Initialize Gemini RAG system with specified model"""
     try:
@@ -62,10 +66,6 @@ def add_conversation_to_vector_store(question: str, answer: str, vector_store):
     )
     vector_store.add_documents([conversation_doc])
     return conversation_doc
-
-# Auto-initialize Gemini if enabled
-if AUTO_INITIALIZE_GEMINI and st.session_state.gemini_rag is None:
-    st.session_state.gemini_rag = initialize_gemini_with_model(DEFAULT_MODEL)
 
 def main():
     """Main application function"""

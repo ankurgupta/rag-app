@@ -5,12 +5,8 @@
 echo "🤖 Starting RAG Chat Application with Gemini API"
 echo "================================================"
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo "⚠️  .env file not found. Please create one from env_template.txt"
-    echo "   Copy env_template.txt to .env and add your Google API key"
-    exit 1
-fi
+# API key is hardcoded - no .env file needed
+echo "🔑 Using hardcoded Google API key"
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
